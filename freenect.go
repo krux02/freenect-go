@@ -102,20 +102,24 @@ type FrameMode struct {
 	Is_valid               int8
 }
 
+func (this *FrameMode) ptr() *C.freenect_frame_mode {
+	return (*C.freenect_frame_mode)(unsafe.Pointer(this))
+}
+
 func (this *FrameMode) VideoFormat() VideoFormat {
-	return VideoFormat((*C.freenect_frame_mode)(this).video_format)
+	return *(*VideoFormat)(unsafe.Pointer(&this.anon0))
 }
 
 func (this *FrameMode) SetVideoFormat(videoFormat VideoFormat) {
-	(*C.freenect_video_format)(this).video_format = C.freenect_video_format(videoFormat)
+	*(*VideoFormat)(unsafe.Pointer(&this.anon0)) = videoFormat
 }
 
 func (this *FrameMode) DepthFormat() DepthFormat {
-	return DepthFormat((*C.freenect_depth_format)(this).depth_format)
+	return *(*DepthFormat)(unsafe.Pointer(&this.anon0))
 }
 
-func (this *FrameMode) SetDepthFormat() (depthFormat DepthFormat) {
-	(*C.freenect_depth_format)(this).depth_format = C.freenect_depth_format(depthFormat)
+func (this *FrameMode) SetDepthFormat(depthFormat DepthFormat) {
+	*(*DepthFormat)(unsafe.Pointer(&this.anon0)) = depthFormat
 }
 
 /// Enumeration of LED states
@@ -135,9 +139,9 @@ const (
 type TiltStatusCode C.freenect_tilt_status_code
 
 const (
-	StatusStopped = TiltStatus(C.TILT_STATUS_STOPPED) /**< Tilt motor is stopped */
-	StatusLimit   = TiltStatus(C.TILT_STATUS_LIMIT)   /**< Tilt motor has reached movement limit */
-	StatusMoving  = TiltStatus(C.TILT_STATUS_MOVING)  /**< Tilt motor is currently moving to new position */
+	StatusStopped = TiltStatusCode(C.TILT_STATUS_STOPPED) /**< Tilt motor is stopped */
+	StatusLimit   = TiltStatusCode(C.TILT_STATUS_LIMIT)   /**< Tilt motor has reached movement limit */
+	StatusMoving  = TiltStatusCode(C.TILT_STATUS_MOVING)  /**< Tilt motor is currently moving to new position */
 )
 
 type RawTiltState struct {
@@ -147,6 +151,10 @@ type RawTiltState struct {
 	Tilt_angle      int8
 	Pad_cgo_0       [1]byte
 	Tilt_status     uint32
+}
+
+func (this *RawTiltState) ptr() *C.freenect_raw_tilt_state {
+	return (*C.freenect_raw_tilt_state)(unsafe.Pointer(this))
 }
 
 type Context struct{}
@@ -161,7 +169,7 @@ func (this *Device) ptr() *C.freenect_device {
 	return (*C.freenect_device)(unsafe.Pointer(this))
 }
 
-func (this *UsbContext) ptr() *C.freenect_context {
+func (this *UsbContext) ptr() *C.freenect_usb_context {
 	return (*C.freenect_usb_context)(unsafe.Pointer(this))
 }
 
@@ -189,8 +197,9 @@ const (
  * @return 0 on success, < 0 on error
  */
 //FREENECTAPI int freenect_init(freenect_context **ctx, freenect_usb_context *usb_ctx);
-func Init(ubs_ctx *UsbContext) (ctx *Context, status int) {
-	status = int((**C.freenect_context)(unsafe.Pointer(&ctx)))
+func Init(usbContext *UsbContext) (context *Context, status int) {
+	ctx := (**C.freenect_context)(unsafe.Pointer(&context))
+	status = int(C.freenect_init(ctx, unsafe.Pointer(usbContext)))
 	return
 }
 
@@ -330,7 +339,7 @@ func (ctx *Context) SupportedSubdevices() int {
  */
 //FREENECTAPI void freenect_select_subdevices(freenect_context *ctx, freenect_device_flags subdevs);
 func (ctx *Context) SelectSubdevices(subdevs DeviceFlags) {
-	C.freenect_device_flags(ctx.ptr(), C.freenect_device_flags(subdevs))
+	C.freenect_select_subdevices(ctx.ptr(), C.freenect_device_flags(subdevs))
 }
 
 /**
@@ -342,7 +351,7 @@ func (ctx *Context) SelectSubdevices(subdevs DeviceFlags) {
  */
 //FREENECTAPI freenect_device_flags freenect_enabled_subdevices(freenect_context *ctx);
 func (ctx *Context) EnabledSubdevices() DeviceFlags {
-	return DeviceFlags(C.freenect_enabled_subdevices(ctx.prt()))
+	return DeviceFlags(C.freenect_enabled_subdevices(ctx.ptr()))
 }
 
 /**
@@ -358,7 +367,7 @@ func (ctx *Context) EnabledSubdevices() DeviceFlags {
  */
 //FREENECTAPI int freenect_open_device(freenect_context *ctx, freenect_device **dev, int index);
 func (ctx *Context) OpenDevices(index int) (dev *Device, status int) {
-	status = int(C.freenect_open_device(ctx.ptr(), (**C.freenect_device)(&dev), C.int(index)))
+	status = int(C.freenect_open_device(ctx.ptr(), (**C.freenect_device)(unsafe.Pointer(&dev)), C.int(index)))
 	return dev, status
 }
 
@@ -377,7 +386,7 @@ func (ctx *Context) OpenDevices(index int) (dev *Device, status int) {
 func (ctx *Context) OpenDeviceByCameraSerialindex(camera_serial string) (dev *Device, status int) {
 	cs := C.CString(camera_serial)
 	defer C.free(unsafe.Pointer(cs))
-	status = int(C.freenect_open_device_by_camera_serial(ctx.ptr(), (**C.freenect_device)(&dev), cs))
+	status = int(C.freenect_open_device_by_camera_serial(ctx.ptr(), (**C.freenect_device)(unsafe.Pointer(&dev)), cs))
 	return dev, status
 }
 
@@ -390,7 +399,7 @@ func (ctx *Context) OpenDeviceByCameraSerialindex(camera_serial string) (dev *De
  */
 //FREENECTAPI int freenect_close_device(freenect_device *dev);
 func (dev *Device) Close() int {
-	return int(C.freenect_close_device, dev.ptr())
+	return int(C.freenect_close_device(dev.ptr()))
 }
 
 /**
@@ -402,7 +411,7 @@ func (dev *Device) Close() int {
  */
 //FREENECTAPI void freenect_set_user(freenect_device *dev, void *user);
 func (dev *Device) SetUser(user unsafe.Pointer) {
-	C.freenect_set_user(dev.ptr, user)
+	C.freenect_set_user(dev.ptr(), user)
 }
 
 /**
@@ -570,7 +579,7 @@ func (dev *Device) UpdateTiltState() int {
  */
 //FREENECTAPI freenect_raw_tilt_state* freenect_get_tilt_state(freenect_device *dev);
 func (dev *Device) GetTiltState() *RawTiltState {
-	return (*RawTiltState)(C.freenect_get_tilt_state(dev.ptr()))
+	return (*RawTiltState)(unsafe.Pointer(C.freenect_get_tilt_state(dev.ptr())))
 }
 
 /**
@@ -582,7 +591,7 @@ func (dev *Device) GetTiltState() *RawTiltState {
  */
 //FREENECTAPI double freenect_get_tilt_degs(freenect_raw_tilt_state *state);
 func (state *RawTiltState) GetTiltDegs() float64 {
-	return float64(C.freenect_get_tilt_degs((*C.freenect_raw_tilt_state)(state)))
+	return float64(C.freenect_get_tilt_degs(state.ptr()))
 }
 
 /**
@@ -599,7 +608,7 @@ func (state *RawTiltState) GetTiltDegs() float64 {
  */
 //FREENECTAPI int freenect_set_tilt_degs(freenect_device *dev, double angle);
 func (dev *Device) SetTiltDegs(angle float64) int {
-	C.freenect_set_tilt_degs(dev.ptr(), C.double(angle))
+	return int(C.freenect_set_tilt_degs(dev.ptr(), C.double(angle)))
 }
 
 /**
@@ -612,7 +621,7 @@ func (dev *Device) SetTiltDegs(angle float64) int {
  */
 //FREENECTAPI freenect_tilt_status_code freenect_get_tilt_status(freenect_raw_tilt_state *state);
 func (state *RawTiltState) GetTiltStatus() TiltStatusCode {
-	return TiltStatusCode(C.freenect_get_tilt_status((*RawTiltState)(state)))
+	return TiltStatusCode(C.freenect_get_tilt_status(state.ptr()))
 }
 
 /**
@@ -626,7 +635,7 @@ func (state *RawTiltState) GetTiltStatus() TiltStatusCode {
  */
 //FREENECTAPI int freenect_set_led(freenect_device *dev, freenect_led_options option);
 func (dev *Device) SetLed(option LedOptions) int {
-	return int(C.freenect_set_led(dev.ptr(), C.freenect_led_options(options)))
+	return int(C.freenect_set_led(dev.ptr(), C.freenect_led_options(option)))
 }
 
 /**
@@ -642,7 +651,7 @@ func (dev *Device) SetLed(option LedOptions) int {
  */
 //FREENECTAPI void freenect_get_mks_accel(freenect_raw_tilt_state *state, double* x, double* y, double* z);
 func (this *RawTiltState) GetMksAccel() (x, y, z float64) {
-	C.freenect_get_mks_accel((*C.freenect_raw_tilt_state)(this), (*C.double)(&x), (*C.double)(&y), (*C.double)(&z))
+	C.freenect_get_mks_accel(this.ptr(), (*C.double)(&x), (*C.double)(&y), (*C.double)(&z))
 	return
 }
 
@@ -665,8 +674,9 @@ func GetVideoModeCount() int {
  * @return A freenect_frame_mode describing the nth video mode
  */
 //FREENECTAPI freenect_frame_mode freenect_get_video_mode(int mode_num);
-func GetVideoMode(mode_num int) {
-	return FrameMode(C.freenect_get_video_mode(C.int(mode_num)))
+func GetVideoMode(mode_num int) FrameMode {
+	fm := C.freenect_get_video_mode(C.int(mode_num))
+	return *(*FrameMode)(unsafe.Pointer(&fm))
 }
 
 /**
@@ -679,7 +689,8 @@ func GetVideoMode(mode_num int) {
  */
 //FREENECTAPI freenect_frame_mode freenect_get_current_video_mode(freenect_device *dev);
 func (dev *Device) GetCurrentVideoMode() FrameMode {
-	return FrameMode(C.freenect_get_current_video_mode(dev.ptr()))
+	fm := C.freenect_get_current_video_mode(dev.ptr())
+	return *(*FrameMode)(unsafe.Pointer(&fm))
 }
 
 /**
@@ -693,7 +704,8 @@ func (dev *Device) GetCurrentVideoMode() FrameMode {
  */
 //FREENECTAPI freenect_frame_mode freenect_find_video_mode(freenect_resolution res, freenect_video_format fmt);
 func FindVideoMode(res Resolution, format VideoFormat) FrameMode {
-	return FrameMode(C.freenect_find_video_mode(C.freenect_resolution(res), C.freenect_video_format(fmt)))
+	fm := C.freenect_find_video_mode(C.freenect_resolution(res), C.freenect_video_format(format))
+	return *(*FrameMode)(unsafe.Pointer(&fm))
 }
 
 /**
@@ -709,8 +721,8 @@ func FindVideoMode(res Resolution, format VideoFormat) FrameMode {
  * @return 0 on success, < 0 if error
  */
 //FREENECTAPI int freenect_set_video_mode(freenect_device* dev, freenect_frame_mode mode);
-func (dev *Device) SetVideoMode(mode Framemode) int {
-	return int(C.freenect_set_video_mode(dev.ptr(), C.freenect_frame_mode(mode)))
+func (dev *Device) SetVideoMode(mode FrameMode) int {
+	return int(C.freenect_set_video_mode(dev.ptr(), *mode.ptr()))
 }
 
 /**
@@ -732,8 +744,9 @@ func GetDepthModeCount() int {
  * @return A freenect_frame_mode describing the nth depth mode
  */
 //FREENECTAPI freenect_frame_mode freenect_get_depth_mode(int mode_num);
-func GetDepthMode(mode_num int) {
-	return FrameMode(C.freenect_get_depth_mode(C.int(mode_num)))
+func GetDepthMode(mode_num int) FrameMode {
+	fm := C.freenect_get_depth_mode(C.int(mode_num))
+	return *(*FrameMode)(unsafe.Pointer(&fm))
 }
 
 /**
@@ -746,7 +759,8 @@ func GetDepthMode(mode_num int) {
  */
 //FREENECTAPI freenect_frame_mode freenect_get_current_depth_mode(freenect_device *dev);
 func (dev *Device) GetCurrentDepthMode() FrameMode {
-	return FrameMode(C.freenect_get_current_depth_mode(dev.ptr()))
+	fm := C.freenect_get_current_depth_mode(dev.ptr())
+	return *(*FrameMode)(unsafe.Pointer(&fm))
 }
 
 /**
@@ -759,8 +773,9 @@ func (dev *Device) GetCurrentDepthMode() FrameMode {
  * @return A freenect_frame_mode that matches the arguments specified, if such a valid mode exists; otherwise, an invalid freenect_frame_mode.
  */
 //FREENECTAPI freenect_frame_mode freenect_find_depth_mode(freenect_resolution res, freenect_depth_format fmt);
-func FindDepthMode(res Resolutien, format DepthFormat) {
-	return FrameMode(C.freenect_find_depth_mode(C.freenect_resolution(res), C.freenect_depth_format(fmt)))
+func FindDepthMode(res Resolution, format DepthFormat) FrameMode {
+	fm := C.freenect_find_depth_mode(C.freenect_resolution(res), C.freenect_depth_format(format))
+	return *(*FrameMode)(unsafe.Pointer(&fm))
 }
 
 /**
@@ -774,7 +789,7 @@ func FindDepthMode(res Resolutien, format DepthFormat) {
  */
 //FREENECTAPI int freenect_set_depth_mode(freenect_device* dev, const freenect_frame_mode mode);
 func (dev *Device) SetDepthMode(mode FrameMode) int {
-	return int(C.freenect_set_depth_mode(dev.ptr(), C.freenect_frame_mode(mode)))
+	return int(C.freenect_set_depth_mode(dev.ptr(), *mode.ptr()))
 }
 
 /**
@@ -787,9 +802,9 @@ func (dev *Device) SetDepthMode(mode FrameMode) int {
  */
 func (dev Device) SetFlag(flag Flag, value bool) int {
 	if value {
-		return int(C.freenect_set_flag(dev.ptr(), C.FREENECT_ON))
+		return int(C.freenect_set_flag(dev.ptr(), C.freenect_flag(flag), C.FREENECT_ON))
 	} else {
-		return int(C.freenect_set_flag(dev.ptr(), C.FREENECT_OFF))
+		return int(C.freenect_set_flag(dev.ptr(), C.freenect_flag(flag), C.FREENECT_OFF))
 	}
 }
 
@@ -801,8 +816,8 @@ func (dev Device) SetFlag(flag Flag, value bool) int {
  * @param num_bytes The size of the firmware in bytes
  */
 //FREENECTAPI void freenect_set_fw_address_nui(freenect_context * ctx, unsigned char * fw_ptr, unsigned int num_bytes);
-func (ctx *Context) SetFwAddressNui(fw_ptr *byte, num_bytes int) {
-	C.freenect_set_fw_address_nui((*C.uchar)(fw_ptr), C.uint(numBytes))
+func (ctx *Context) SetFwAddressNui(fw_ptr *byte, numBytes int) {
+	C.freenect_set_fw_address_nui(ctx.ptr(), (*C.uchar)(fw_ptr), C.uint(numBytes))
 }
 
 /**
@@ -813,6 +828,6 @@ func (ctx *Context) SetFwAddressNui(fw_ptr *byte, num_bytes int) {
  * @param num_bytes The size of the firmware in bytes
  */
 //FREENECTAPI void freenect_set_fw_address_k4w(freenect_context * ctx, unsigned char * fw_ptr, unsigned int num_bytes);
-func (ctx *Context) SetFwAddressNui(fw_ptr *byte, num_bytes int) {
-	C.freenect_set_fw_address_k4w((*C.uchar)(fw_ptr), C.uint(numBytes))
+func (ctx *Context) SetFwAddressK4w(fw_ptr *byte, numBytes int) {
+	C.freenect_set_fw_address_k4w(ctx.ptr(), (*C.uchar)(fw_ptr), C.uint(numBytes))
 }
