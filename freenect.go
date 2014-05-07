@@ -8,6 +8,7 @@ package freenect
 import "C"
 
 import (
+	"fmt"
 	"unsafe"
 )
 
@@ -36,6 +37,19 @@ const (
 	DeviceAudio  = DeviceFlags(C.FREENECT_DEVICE_AUDIO)
 )
 
+func (flags DeviceFlags) String() (result string) {
+	if flags&DeviceMotor != 0 {
+		result = fmt.Sprint(result, "DeviceMotor")
+	}
+	if flags&DeviceCamera != 0 {
+		result = fmt.Sprint(result, "DeviceCamera")
+	}
+	if flags&DeviceAudio != 0 {
+		result = fmt.Sprint(result, "DeviceAudio")
+	}
+	return
+}
+
 /// Enumeration of available resolutions.
 /// Not all available resolutions are actually supported for all video formats.
 /// Frame modes may not perfectly match resolutions.  For instance,
@@ -47,6 +61,19 @@ const (
 	ResolutionMedium = Resolution(C.FREENECT_RESOLUTION_MEDIUM) /**< VGA  - 640x480 */
 	ResolutionHigh   = Resolution(C.FREENECT_RESOLUTION_HIGH)   /**< SXGA - 1280x1024 */
 )
+
+func (res Resolution) String() string {
+	switch res {
+	case ResolutionLow:
+		return "ResolutionLow"
+	case ResolutionMedium:
+		return "ResolutionMedium"
+	case ResolutionHigh:
+		return "ResolutionHigh"
+	default:
+		return "Unknown"
+	}
+}
 
 /// Enumeration of video frame information states.
 /// See http://openkinect.org/wiki/Protocol_Documentation#RGB_Camera for more information.
@@ -62,6 +89,27 @@ const (
 	VideoYuvRaw        = VideoFormat(C.FREENECT_VIDEO_YUV_RAW)         /**< YUV Raw mode */
 )
 
+func (vid VideoFormat) String() string {
+	switch vid {
+	case VideoRgb:
+		return "VideoRgb"
+	case VideoBayer:
+		return "VideoBayer"
+	case VideoIr8Bit:
+		return "VideoIr8Bit"
+	case VideoIr10Bit:
+		return "VideoIr10Bit"
+	case VideoIr10BitPacked:
+		return "VideoIr10BitPacked"
+	case VideoYuvRgb:
+		return "VideoYuvRgb"
+	case VideoYuvRaw:
+		return "VideoYuvRaw"
+	default:
+		return "Unknown"
+	}
+}
+
 /// Enumeration of depth frame states
 /// See http://openkinect.org/wiki/Protocol_Documentation#RGB_Camera for more information.
 type DepthFormat C.freenect_depth_format
@@ -75,6 +123,25 @@ const (
 	Depth_mm         = DepthFormat(C.FREENECT_DEPTH_MM)           /**< depth to each pixel in mm, but left unaligned to RGB image */
 )
 
+func (format DepthFormat) String() string {
+	switch format {
+	case Depth11Bit:
+		return "Depth11Bit"
+	case Depth10Bit:
+		return "Depth10Bit"
+	case Depth11BitPacked:
+		return "Depth11BitPacked"
+	case Depth10PitPacked:
+		return "Depth10PitPacked"
+	case DepthRegistered:
+		return "DepthRegistered"
+	case Depth_mm:
+		return "Depth_mm"
+	default:
+		return "Unknown"
+	}
+}
+
 /// Enumeration of flags to toggle features with freenect_set_flag()
 type Flag C.freenect_flag
 
@@ -86,6 +153,25 @@ const (
 	MirrorDepth      = Flag(C.FREENECT_MIRROR_DEPTH)
 	MirrorVideo      = Flag(C.FREENECT_MIRROR_VIDEO)
 )
+
+func (flags Flag) String() (result string) {
+	if flags&AutoExposure != 0 {
+		result = fmt.Sprint(result, "AutoExposure")
+	}
+	if flags&AutoWhiteBalance != 0 {
+		result = fmt.Sprint(result, "AutoWhiteBalance")
+	}
+	if flags&RawColor != 0 {
+		result = fmt.Sprint(result, "RawColor")
+	}
+	if flags&MirrorDepth != 0 {
+		result = fmt.Sprint(result, "MirrorDepth")
+	}
+	if flags&MirrorVideo != 0 {
+		result = fmt.Sprint(result, "MirrorVideo")
+	}
+	return
+}
 
 /// Structure to give information about the width, height, bitrate,
 /// framerate, and buffer size of a frame in a particular mode, as
@@ -324,8 +410,8 @@ func (ctx *Context) NumDevices() int {
  * @return Flags representing the subdevices that the library supports opening (see freenect_device_flags)
  */
 //FREENECTAPI int freenect_supported_subdevices(void);
-func (ctx *Context) SupportedSubdevices() int {
-	return int(C.freenect_supported_subdevices())
+func (ctx *Context) SupportedSubdevices() DeviceFlags {
+	return DeviceFlags(C.freenect_supported_subdevices())
 }
 
 /**
