@@ -1,6 +1,7 @@
 package freenect
 
-//#cgo LDFLAGS: -lfreenect
+//#cgo CFLAGS: -I/home/doering/gocode/src/github.com/krux02/freenect-go/include/
+//#cgo LDFLAGS: -lfreenect -L/home/doering/gocode/src/github.com/krux02/freenect-go/libfreenect/build/lib/
 //#include <libfreenect/libfreenect.h>
 //#include <stdlib.h>
 //extern void callLogCallback(freenect_context *dev, freenect_loglevel level, char *msg);
